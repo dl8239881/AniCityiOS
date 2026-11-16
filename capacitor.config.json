@@ -1,0 +1,9 @@
+{
+  "appId": "com.anicity.laceandmayhem",
+  "appName": "Ani City",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#07010f"
+  }
+}
