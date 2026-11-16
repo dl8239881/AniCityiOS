@@ -1,0 +1,71 @@
+name: Unsigned IPA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: anicity-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ipa:
+    name: Build unsigned AniCity.ipa
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          if [ -d /Applications/Xcode_16.4.app ]; then
+            sudo xcode-select -s /Applications/Xcode_16.4.app
+          elif [ -d /Applications/Xcode_16.3.app ]; then
+            sudo xcode-select -s /Applications/Xcode_16.3.app
+          else
+            sudo xcode-select -s /Applications/Xcode.app
+          fi
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Install XcodeGen
+        run: |
+          set -euo pipefail
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          export HOMEBREW_NO_INSTALL_UPGRADE=1
+          brew install xcodegen
+          xcodegen --version
+
+      - name: Build unsigned IPA
+        run: bash scripts/build-unsigned-ipa.sh
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AniCity-unsigned-ipa
+          path: build/AniCity.ipa
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.${{ github.run_number }}
+          name: Ani City prototype ${{ github.run_number }}
+          prerelease: true
+          generate_release_notes: true
+          files: build/AniCity.ipa
+          body: |
+            Unsigned iOS build of Ani City: Lace & Mayhem (prototype).
+            Sideload with appdb — appdb re-signs it. No Apple certificate is embedded.
+            Requires iOS 16 or later, iPhone, landscape.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
