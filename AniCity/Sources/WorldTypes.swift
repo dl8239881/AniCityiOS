@@ -103,7 +103,7 @@ enum Economy {
     static let theftWallet = 40
     static let escapeBonus = 80
     static let starCoolBonus = 30
-    static let bustKeep = 0.75
+    static let bustKeep: Float = 0.75
     static let pickupValue = 80
 }
 

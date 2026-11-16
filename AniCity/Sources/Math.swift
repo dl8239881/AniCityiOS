@@ -48,6 +48,7 @@ struct Vec3: Equatable {
     static func / (a: Vec3, s: Float) -> Vec3 { Vec3(a.x / s, a.y / s, a.z / s) }
     static func += (a: inout Vec3, b: Vec3) { a = a + b }
     static func -= (a: inout Vec3, b: Vec3) { a = a - b }
+    static func *= (a: inout Vec3, s: Float) { a = a * s }
 }
 
 func dot(_ a: Vec3, _ b: Vec3) -> Float {
@@ -162,7 +163,7 @@ func lineOfSight(_ a: Vec3, _ b: Vec3, boxes: [AABB]) -> Bool {
     let eyeDist = deltaEye.length
     let eyeDir = eyeDist > 0.001 ? deltaEye / eyeDist : dir
     for box in boxes {
-        if let t = rayHit(eyeA, eyeDir, box, eyeDist) , t < eyeDist - 0.4 {
+        if let t = rayHit(eyeA, eyeDir, box, maxT: eyeDist), t < eyeDist - 0.4 {
             return false
         }
     }

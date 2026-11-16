@@ -215,7 +215,7 @@ final class InputController {
         }
         lightIdle(controller)
         if let haptics = controller.haptics {
-            hapticEngine = try? haptics.createEngine(withLocality: .handles)
+            hapticEngine = haptics.createEngine(withLocality: .handles)
             try? hapticEngine?.start()
         }
     }

@@ -776,7 +776,7 @@ final class GameSim {
             let direction = ray / reach
             var allowed = reach
             for box in world.boxes {
-                if let hit = rayHit(Vec3(target.x, target.y, target.z), direction, box, allowed), hit > 0.2 {
+                if let hit = rayHit(Vec3(target.x, target.y, target.z), direction, box, maxT: allowed), hit > 0.2 {
                     allowed = min(allowed, max(1.25, hit - 0.3))
                 }
             }
