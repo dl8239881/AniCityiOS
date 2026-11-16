@@ -1,24 +1,28 @@
 #!/usr/bin/env bash
-# Builds an unsigned AniCity.ipa (Payload/AniCity.app) for sideload tools
-# such as appdb that re-sign on device. No Apple certificate required.
+# Packages the Capacitor iOS app as an unsigned AniCity.ipa.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-if ! command -v xcodegen >/dev/null 2>&1; then
-  echo "xcodegen is not installed. brew install xcodegen" >&2
+if ! command -v xcodebuild >/dev/null 2>&1; then
+  echo "xcodebuild is required (run this on a Mac)." >&2
   exit 1
 fi
 
-xcodegen generate --spec "$ROOT/project.yml"
+npm ci
+npm run build
+npx cap sync ios
+
+cd "$ROOT/ios/App"
+pod install
 
 DERIVED="$ROOT/build/DerivedData"
 rm -rf "$DERIVED"
 
 xcodebuild \
-  -project "$ROOT/AniCity.xcodeproj" \
-  -scheme AniCity \
+  -workspace "$ROOT/ios/App/App.xcworkspace" \
+  -scheme App \
   -configuration Release \
   -sdk iphoneos \
   -destination "generic/platform=iOS" \
@@ -28,29 +32,24 @@ xcodebuild \
   CODE_SIGN_IDENTITY="" \
   CODE_SIGN_STYLE=Manual \
   DEVELOPMENT_TEAM="" \
-  PROVISIONING_PROFILE_SPECIFIER="" \
   ONLY_ACTIVE_ARCH=NO \
   ARCHS=arm64 \
   build
 
-APP="$(find "$DERIVED/Build/Products" -type d -name 'AniCity.app' | head -n 1)"
+APP="$(find "$DERIVED/Build/Products" -type d -name 'App.app' | head -n 1)"
 if [[ -z "${APP}" || ! -d "${APP}" ]]; then
-  echo "AniCity.app was not produced" >&2
-  find "$DERIVED/Build/Products" -maxdepth 3 -type d >&2 || true
+  echo "App.app was not produced" >&2
   exit 1
 fi
-
-echo "App bundle: $APP"
 
 STAGE="$ROOT/build/Payload"
 rm -rf "$STAGE" "$ROOT/build/AniCity.ipa"
 mkdir -p "$STAGE"
-cp -R "$APP" "$STAGE/AniCity.app"
-chmod +x "$STAGE/AniCity.app/AniCity" || true
-# appdb re-signs. Strip any signature Xcode still embedded.
-codesign --remove-signature "$STAGE/AniCity.app" >/dev/null 2>&1 || true
-find "$STAGE/AniCity.app" -name '_CodeSignature' -type d -prune -exec rm -rf {} + || true
-rm -f "$STAGE/AniCity.app/embedded.mobileprovision" || true
+cp -R "$APP" "$STAGE/App.app"
+chmod +x "$STAGE/App.app/App" || true
+codesign --remove-signature "$STAGE/App.app" >/dev/null 2>&1 || true
+find "$STAGE/App.app" -name '_CodeSignature' -type d -prune -exec rm -rf {} + || true
+rm -f "$STAGE/App.app/embedded.mobileprovision" || true
 
 (
   cd "$ROOT/build"
@@ -58,19 +57,10 @@ rm -f "$STAGE/AniCity.app/embedded.mobileprovision" || true
 )
 
 test -f "$ROOT/build/AniCity.ipa"
-echo "---- IPA ----"
-ls -lh "$ROOT/build/AniCity.ipa"
-echo "---- bundle exec ----"
-file "$STAGE/AniCity.app/AniCity"
-echo "---- zip listing (head) ----"
-unzip -l "$ROOT/build/AniCity.ipa" | head -n 40
-
-# Sanity: unsigned zip with the expected layout, arm64 Mach-O, no signature.
-unzip -l "$ROOT/build/AniCity.ipa" | grep -q "Payload/AniCity.app/Info.plist"
-unzip -l "$ROOT/build/AniCity.ipa" | grep -q "Payload/AniCity.app/AniCity"
-file "$STAGE/AniCity.app/AniCity" | grep -q "arm64"
-if codesign -d "$STAGE/AniCity.app" >/dev/null 2>&1; then
+file "$STAGE/App.app/App" | grep -q arm64
+if codesign -d "$STAGE/App.app" >/dev/null 2>&1; then
   echo "Expected the packaged app to be unsigned" >&2
   exit 1
 fi
+ls -lh "$ROOT/build/AniCity.ipa"
 echo "Unsigned AniCity.ipa is ready."

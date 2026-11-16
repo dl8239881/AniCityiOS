@@ -1,9 +1,9 @@
+node_modules/
+dist/
 build/
-DerivedData/
-*.xcodeproj/
-*.xcworkspace/
-xcuserdata/
-*.xcuserstate
+ios/App/Pods/
+ios/App/App/public/
+ios/App/build/
+ios/DerivedData/
 .DS_Store
-*.ipa
-.swiftpm/
+*.xcuserstate
