@@ -1,6 +1,6 @@
 # Ani City: Lace & Mayhem
 
-A playable iPhone prototype of a small open city. Ani and the pedestrians are CC0 rigged humans (see CREDITS.md): skinned walk, jog, run, and idle clips, a wet clearcoat cornea, and hair cards. Ani keeps blonde twin-tails, blue eyes, and a black lace outfit over the only adult female locomotion rig that library ships. The black sports car is a CC0 coupe with a windscreen rain shader, wipers, a steering wheel that follows steer input, and a door swing when you get in or out. Roads stay wet, with puddles. Lighting is Three.js: clearcoat, bloom, filmic tone mapping, and a night reflection probe.
+A playable iPhone prototype of a small open city. Ani is the supplied adult woman, restyled with blonde twin-tails, blue eyes, and an opaque black off-shoulder lace dress. Rook, the other pedestrians, and the police are CC0 MakeHuman rigs (see CREDITS.md). Walk, jog, run, and idle clips drive everyone, and rain darkens skin and cloth. The black sports car is a CC0 coupe with a windscreen rain shader, wipers, a steering wheel that follows steer input, and a door swing when you get in or out. Roads stay wet, with puddles. Lighting is Three.js: clearcoat, bloom, filmic tone mapping, and a night reflection probe.
 
 This is a vertical slice. It is landscape-only and targets iOS 16+.
 
@@ -52,4 +52,4 @@ The unsigned IPA is tens of megabytes, not the 3 GB end of a texture dump. The t
 
 ## Not in this slice
 
-This is not Nanite, Lumen, MetaHuman, or strand hair. Skin uses sheen as a stand-in for subsurface scattering. Eyes are a clearcoat cornea over the painted face, not a full refraction shader. Ani's black lace dress is a restyle of the CC0 suit mesh plus an overskirt, because that rig does not include a separate off-shoulder dress. The coupe's outer door is modeled into the body, so the swing is clearest on the simpler cars. Hands reach the wheel with a posed grip, not IK. There is no Mixamo data. Guns, companions, and the rest of a full city are still out.
+This is not Nanite, Lumen, MetaHuman, or strand hair. Skin uses sheen as a stand-in for subsurface scattering. Eyes are a clearcoat cornea over the painted face, not a full refraction shader. Ani's black lace dress is a restyle of the CC0 suit mesh plus an overskirt, because that rig does not include a separate off-shoulder dress. The coupe's outer door is modeled into the body, so the swing is clearest on the simpler cars. Hands reach the wheel with a posed grip, not IK. There is no Mixamo data. Guns and the rest of a full city are still out. Rook, an adult companion in everyday clothes, follows Ani on foot and rides in the passenger seat.

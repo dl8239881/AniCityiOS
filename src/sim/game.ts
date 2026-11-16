@@ -120,7 +120,7 @@ export class Game {
   pickups: { x: number; z: number; alive: boolean; t: number }[] = []
   menu: Snapshot['menu'] = null
   menuIndex = 0
-  banner = 'Take the black sports car. The city is wet, and it is watching.'
+  banner = 'Rook is with you. Take the black sports car.'
   bannerT = 6
   prompt = ''
   mercy = 0
@@ -133,6 +133,10 @@ export class Game {
   door = 0
   doorCar: CarEnt | null = null
   board: { car: CarEnt; mode: 'in' | 'out'; t: number } | null = null
+  mateX = SPAWN.x + 1.3
+  mateZ = SPAWN.z - 0.2
+  mateYaw = 0
+  mateSpeed = 0
 
   constructor() {
     this.cars.push(
@@ -308,7 +312,42 @@ export class Game {
     this.collect(dt)
     this.wanted(dt)
     if (this.health <= 0 && this.stun <= 0) this.respawn(false)
+    this.updateMate(dt)
     this.prompt = this.currentPrompt()
+  }
+
+  private updateMate(dt: number) {
+    let tx = this.px
+    let tz = this.pz
+    let face = this.pyaw
+    if (this.driving) {
+      const right = rightOf(this.driving.yaw)
+      tx = this.driving.x + right.x * 0.42
+      tz = this.driving.z + right.z * 0.42
+      face = this.driving.yaw
+    } else {
+      const back = forward(this.pyaw)
+      const right = rightOf(this.pyaw)
+      tx = this.px - back.x * 1.25 + right.x * 0.55
+      tz = this.pz - back.z * 1.25 + right.z * 0.55
+      face = this.pyaw
+    }
+    const dx = tx - this.mateX
+    const dz = tz - this.mateZ
+    const dist = len(dx, dz)
+    if (dist > 0.28) {
+      const pace = dist > 2.4 ? 6.4 : 4.3
+      this.mateX += (dx / dist) * pace * dt
+      this.mateZ += (dz / dist) * pace * dt
+      this.mateYaw = approach(this.mateYaw, this.driving ? face : yawOf(dx, dz), 10 * dt)
+      this.mateSpeed = pace
+    } else {
+      this.mateSpeed = 0
+      this.mateYaw = approach(this.mateYaw, face, 8 * dt)
+    }
+    const pushed = pushOut(this.mateX, this.mateZ, 0.34)
+    this.mateX = pushed.x
+    this.mateZ = pushed.z
   }
 
   private handleAction(edges: { action: number; phone: number }) {
@@ -879,6 +918,9 @@ export class Game {
     const spot = pushOut(base.x + 2.2, base.z + 1.2, 0.4)
     this.px = spot.x
     this.pz = spot.z
+    this.mateX = spot.x + 1.2
+    this.mateZ = spot.z - 0.4
+    this.mateSpeed = 0
     this.say(busted ? `Busted. Lost $${lost}.` : `Wasted. Lost $${lost}.`)
     this.save()
   }
@@ -913,6 +955,7 @@ export class Game {
     ]
     for (const pickup of this.pickups) if (pickup.alive) blips.push({ x: pickup.x, z: pickup.z, color: '#3dff7a' })
     for (const cop of this.cars) if (cop.role === 'police' && cop.alive) blips.push({ x: cop.x, z: cop.z, color: '#ff3040' })
+    blips.push({ x: this.mateX, z: this.mateZ, color: '#f2d27a' })
     const speed = this.driving ? `${Math.round(len(this.driving.vx, this.driving.vz) * 3.6)} km/h` : ''
     let objective = 'Lace House  $750'
     if (this.stars > 0) objective = 'Lose the cops'

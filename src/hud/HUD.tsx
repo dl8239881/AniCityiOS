@@ -74,6 +74,7 @@ export function HUD({ sim }: { sim: Game }) {
         <div>
           <div className="health"><div style={{ width: `${Math.max(0, Math.min(100, hud.health))}%` }} /></div>
           <div className="name">{hud.driving ? 'ANI  ·  DRIVING' : 'ANI'}</div>
+          <div className="objective">Rook is with you</div>
           <div className="objective">{hud.objective}</div>
           <canvas ref={mapRef} className="map" width={132} height={132} />
         </div>

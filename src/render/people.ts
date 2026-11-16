@@ -19,6 +19,7 @@ export type Human = {
 
 export type Cast = {
   ani: Human
+  mate: Human
   peds: Human[]
   cops: Human[]
   cars: THREE.Group[]
@@ -115,7 +116,7 @@ function dress(root: THREE.Object3D, maps: Maps, opts: { ani: boolean; police: b
   const lod: THREE.Object3D[] = []
   const arms: THREE.Bone[] = []
   root.traverse((obj) => {
-    if ((obj as THREE.Bone).isBone && (obj.name === 'lowerarm_l' || obj.name === 'lowerarm_r' || obj.name === 'hand_l' || obj.name === 'hand_r')) {
+    if ((obj as THREE.Bone).isBone && /^(lowerarm_[lr]|hand_[lr]|CC_Base_[LR]_(Forearm|Hand))$/.test(obj.name)) {
       arms.push(obj as THREE.Bone)
     }
   })
@@ -157,7 +158,7 @@ function dress(root: THREE.Object3D, maps: Maps, opts: { ani: boolean; police: b
       if (name.includes('short') || name.includes('hair') || name.includes('afro') || name.includes('braid')) {
         standard.color.multiply(new THREE.Color(opts.hair))
       }
-      if (name.includes('anatomical') && standard.isMeshPhysicalMaterial) {
+      if ((name.includes('anatomical') || standard.name.toLowerCase().includes('skin')) && standard.isMeshPhysicalMaterial) {
         standard.sheen = 1
         standard.sheenRoughness = 0.42
         standard.sheenColor = new THREE.Color('#ffb3a6')
@@ -308,7 +309,8 @@ function makeHuman(source: THREE.Group, clips: THREE.AnimationClip[], maps: Maps
       }
       if (gripping) {
         for (const bone of parts.arms) {
-          if (bone.name.endsWith('_l')) bone.quaternion.multiply(gripL)
+          const left = bone.name.endsWith('_l') || bone.name.includes('_L_')
+          if (left) bone.quaternion.multiply(gripL)
           else bone.quaternion.multiply(gripR)
         }
       }
@@ -321,13 +323,26 @@ function makeHuman(source: THREE.Group, clips: THREE.AnimationClip[], maps: Maps
   }
 }
 
+function clipAlias(clip: THREE.AnimationClip) {
+  const name = clip.name.replace(/_Camila$/, '').replace(/_Armature$/, '')
+  if (name !== clip.name) clip.name = name
+  return clip
+}
+
 export async function loadCast(
   maps: Maps,
   peds: { hair: string; cloth: string }[],
   cars: { kind: CarKind; color: string }[],
 ): Promise<Cast> {
-  const [harper, sam, hero] = await Promise.all([loadGltf('harper.glb'), loadGltf('sam.glb'), loadHeroCar('#07070c').catch(() => null)])
-  const ani = makeHuman(harper.scene, harper.animations, maps, { ani: true, police: false, hair: '#f2d27a', cloth: '#111111' })
+  const [aniFile, harper, sam, hero] = await Promise.all([
+    loadGltf('ani.glb'),
+    loadGltf('harper.glb'),
+    loadGltf('sam.glb'),
+    loadHeroCar('#07070c').catch(() => null),
+  ])
+  aniFile.animations.forEach(clipAlias)
+  const ani = makeHuman(aniFile.scene, aniFile.animations, maps, { ani: false, police: false, hair: '#f2d27a', cloth: '#111111' })
+  const mate = makeHuman(sam.scene, sam.animations, maps, { ani: false, police: false, hair: '#1c140f', cloth: '#243044' })
   const people = peds.map((ped, i) => {
     const female = i % 2 === 0
     const src = female ? harper : sam
@@ -341,5 +356,5 @@ export async function loadCast(
     if (i === 0 && car.kind === 'sports' && hero) return hero
     return createCar(car.kind, car.color)
   })
-  return { ani, peds: people, cops, cars: meshes }
+  return { ani, mate, peds: people, cops, cars: meshes }
 }

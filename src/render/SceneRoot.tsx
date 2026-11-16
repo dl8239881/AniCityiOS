@@ -306,6 +306,23 @@ export function SceneRoot({ sim, maps, cast }: { sim: Game; maps: Maps; cast: Ca
     }
     ani.root.visible = true
 
+    const mate = cast.mate
+    const riding = !!sim.driving && sim.mateSpeed < 0.45
+    if (riding && sim.driving) {
+      seatOffset.set(-0.38, 0.02, 0.08)
+      seatOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), sim.driving.yaw)
+      mate.root.position.set(sim.driving.x + sim.driving.ox + seatOffset.x, 0.02, sim.driving.z + sim.driving.oz + seatOffset.z)
+      mate.face(sim.driving.yaw, 0)
+      mate.grip(false)
+      mate.update(dt, 0, 'sit', 1, 5)
+    } else {
+      mate.root.position.set(sim.mateX, 0, sim.mateZ)
+      mate.face(sim.mateYaw, 0)
+      mate.grip(false)
+      mate.update(dt, sim.mateSpeed, 'locomotion', 1, camera.distanceTo(mate.root.position))
+    }
+    mate.root.visible = true
+
     sim.peds.forEach((ped, i) => {
       const person = cast.peds[i]
       if (!person) return
@@ -414,6 +431,7 @@ export function SceneRoot({ sim, maps, cast }: { sim: Game; maps: Maps; cast: Ca
       <Sky nightRef={nightRef} />
       <City maps={maps} nightRef={nightRef} />
       <primitive object={cast.ani.root} />
+      <primitive object={cast.mate.root} />
       {cast.peds.map((person, i) => (
         <primitive key={i} object={person.root} />
       ))}

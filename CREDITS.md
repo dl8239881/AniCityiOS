@@ -4,12 +4,13 @@ Ani City ships only assets that allow redistribution in a game. Nothing here is 
 
 ## Characters
 
-- Harper locomotion collection and Sam locomotion collection, CC0, by Innerscene. Built from MakeHuman / MPFB body, rig, and skin assets, which are also CC0. Each GLB includes idle, relaxed walk, brisk walk, jog, run, carry, and sit/stand clips authored by Innerscene (not motion capture).
+- Ani is built from a realistic adult female the project owner supplied (Character Creator-style body, rig, skin, eyes, lashes, and hair cards). The shipped file is `public/models/ani.glb` only. The original FBX is not in the repository. In this project her hair is recolored blonde and extended into twin-tails, her irises are shifted blue, and the supplied shirt, shorts, and underwear meshes are replaced by an opaque black off-shoulder lace dress plus the original heels. Idle, walk, jog, run, sit, and enter/exit clips are authored on her rig for this game.
+- Rook, the companion, and the other pedestrians and police use the Harper and Sam locomotion collections, CC0, by Innerscene, built from MakeHuman / MPFB body, rig, and skin assets, which are also CC0. Clips are Innerscene's original authored loops, not motion capture.
   - Harper: https://www.innerscene.com/tools/library/3d-parts/locomotion-collection-harper-3d-person-animated-797e1e2a
   - Sam: https://www.innerscene.com/tools/library/3d-parts/locomotion-collection-sam-3d-person-animated-dc23800f
 - MakeHuman: http://www.makehumancommunity.org/ (CC0 assets)
 
-Harper is the only adult woman in that library with a full locomotion rig. Her source profile is an adult in a tailored suit (listed age 58). Ani uses that rig and body, restyled in-engine: blonde twin-tail hair, blue irises with a clearcoat cornea, and a black lace material plus an overskirt. Sam is the adult man used for other pedestrians and for police, with a dark uniform tint and a cap.
+Rook is the adult Sam character in everyday clothes. He follows Ani and rides in the passenger seat. Police use the same male rig with a dark uniform tint and a cap.
 
 No Mixamo clips are included. Mixamo's license is not treated as permission to ship those files.
 
