@@ -42,6 +42,7 @@ export type CarEnt = {
   index: number
   cruise: number
   speed: number
+  steer: number
 }
 
 export type PedEnt = {
@@ -129,6 +130,9 @@ export class Game {
   hornT = 0
   personal: CarEnt | null = null
   night = 1
+  door = 0
+  doorCar: CarEnt | null = null
+  board: { car: CarEnt; mode: 'in' | 'out'; t: number } | null = null
 
   constructor() {
     this.cars.push(
@@ -136,8 +140,8 @@ export class Game {
       this.make('sedan', 'parked', SEDAN_PARK.x, SEDAN_PARK.z, SEDAN_PARK.yaw, '#2a6fbe'),
       this.make('beater', 'parked', BEATER_PARK.x, BEATER_PARK.z, BEATER_PARK.yaw, '#8a4a22'),
     )
-    const paints = ['#c0392b', '#f1c40f', '#27ae60', '#ecf0f1', '#8e44ad', '#e67e22', '#16a085']
-    for (let i = 0; i < 7; i++) {
+    const paints = ['#c0392b', '#f1c40f', '#27ae60', '#ecf0f1', '#8e44ad', '#e67e22', '#16a085', '#d35400', '#7f8c8d', '#2980b9']
+    for (let i = 0; i < 10; i++) {
       const route = ROUTES[i % ROUTES.length]
       const start = route[i % route.length]
       const car = this.make(i % 2 ? 'sedan' : 'beater', 'traffic', start.x, start.z, 0, paints[i])
@@ -165,9 +169,11 @@ export class Game {
       [36, 20],
       [-36, -8],
       [10, -8],
+      [20, 28],
+      [-20, 30],
     ]
-    const cloth = ['#e23b8c', '#3d8bff', '#f2f2f2', '#2ecc71', '#e67e22', '#9b59b6', '#222', '#e74c3c']
-    const hair = ['#2b2118', '#4a3428', '#111', '#6b4a2a', '#1a1a1a', '#3a2a22', '#222', '#5a4030']
+    const cloth = ['#e23b8c', '#3d8bff', '#f2f2f2', '#2ecc71', '#e67e22', '#9b59b6', '#222', '#e74c3c', '#34495e', '#f5d6c6']
+    const hair = ['#2b2118', '#4a3428', '#111', '#6b4a2a', '#1a1a1a', '#3a2a22', '#222', '#5a4030', '#3b2a22', '#111']
     paths.forEach((p, i) => {
       const loop = sidewalk(p[0] < 0 ? 0 : p[0] < 20 ? 1 : 2, p[1] < -10 ? 0 : p[1] < 12 ? 1 : 2)
       this.peds.push({
@@ -213,6 +219,7 @@ export class Game {
       index: 0,
       cruise: 8,
       speed: 0,
+      steer: 0,
     }
   }
 
@@ -263,7 +270,9 @@ export class Game {
     this.camPitch += dragY * 0.008
     this.camPitch = clamp(this.camPitch, 0.18, 0.95)
 
-    if (this.driving) {
+    if (this.board) {
+      this.tickBoard(dt)
+    } else if (this.driving) {
       const throttle = gas ? 1 : brake ? -1 : moveY
       this.drive(this.driving, throttle, moveX, hand, dt)
       this.px = this.driving.x
@@ -273,6 +282,9 @@ export class Game {
         this.camYaw = approach(this.camYaw, this.driving.yaw, 2.4 * dt)
       }
       if (this.driving.condition <= 8) {
+        this.board = null
+        this.door = 0
+        this.doorCar = null
         this.exitCar()
         this.say('The car gave out.')
       }
@@ -306,8 +318,9 @@ export class Game {
       return
     }
     if (!edges.action) return
+    if (this.board) return
     if (this.driving) {
-      this.exitCar()
+      this.board = { car: this.driving, mode: 'out', t: 0 }
       return
     }
     if (inZone(this.px, this.pz, FOOD_ZONE, 0.3)) {
@@ -327,7 +340,63 @@ export class Game {
       return
     }
     const car = this.nearestCar()
-    if (car) this.enter(car)
+    if (car) this.beginEnter(car)
+  }
+
+  private beginEnter(car: CarEnt) {
+    if (car.role === 'traffic' || car.role === 'parked') car.role = 'loose'
+    car.vx = 0
+    car.vz = 0
+    car.speed = 0
+    this.board = { car, mode: 'in', t: 0 }
+  }
+
+  private tickBoard(dt: number) {
+    const boarding = this.board
+    if (!boarding) return
+    boarding.t += dt
+    const car = boarding.car
+    this.doorCar = car
+    if (boarding.mode === 'in') {
+      const open = Math.min(1, boarding.t / 0.38)
+      this.door = boarding.t < 0.55 ? open : Math.max(0, 1 - (boarding.t - 0.55) / 0.4)
+      const spot = this.doorSpot(car)
+      if (!this.driving) {
+        this.px += (spot.x - this.px) * Math.min(1, dt * 4)
+        this.pz += (spot.z - this.pz) * Math.min(1, dt * 4)
+        this.pyaw = approach(this.pyaw, car.yaw, 8 * dt)
+        this.foot = 1.4
+      } else {
+        this.px = car.x
+        this.pz = car.z
+        this.pyaw = car.yaw
+        this.foot = 0
+      }
+      if (boarding.t > 0.55 && !this.driving) this.enter(car)
+      if (boarding.t > 1.02) {
+        this.board = null
+        this.door = 0
+        this.doorCar = null
+      }
+      return
+    }
+    this.door = boarding.t < 0.36 ? Math.min(1, boarding.t / 0.32) : Math.max(0, 1 - (boarding.t - 0.36) / 0.36)
+    if (this.driving) {
+      this.px = this.driving.x
+      this.pz = this.driving.z
+      this.pyaw = this.driving.yaw
+    }
+    if (boarding.t > 0.36 && this.driving) this.exitCar()
+    if (boarding.t > 0.78) {
+      this.board = null
+      this.door = 0
+      this.doorCar = null
+    }
+  }
+
+  private doorSpot(car: CarEnt) {
+    const right = rightOf(car.yaw)
+    return { x: car.x - right.x * 1.7, z: car.z - right.z * 1.7 }
   }
 
   private handleMenu(edges: { cancel: number; phone: number; up: number; down: number; confirm: number; action: number }) {
@@ -418,6 +487,7 @@ export class Game {
   }
 
   private drive(car: CarEnt, throttle: number, steer: number, hand: boolean, dt: number) {
+    car.steer = steer
     const scale = 0.4 + 0.6 * Math.max(car.condition, 0) / 100
     const maxSpeed = (car.kind === 'sports' ? 22 : car.kind === 'police' ? 20 : car.kind === 'sedan' ? 16 : 12.5) * scale
     const accel = (car.kind === 'sports' ? 16 : car.kind === 'police' ? 13 : car.kind === 'sedan' ? 10 : 7.5) * scale
@@ -483,7 +553,10 @@ export class Game {
       } else {
         car.x += dirx * car.speed * dt
         car.z += dirz * car.speed * dt
-        car.yaw = yawOf(dirx, dirz)
+        const desired = yawOf(dirx, dirz)
+        const diff = Math.atan2(Math.sin(desired - car.yaw), Math.cos(desired - car.yaw))
+        car.steer = clamp(diff * 1.8, -1, 1)
+        car.yaw = desired
       }
       const right = rightOf(car.yaw)
       const pull = siren ? 1.6 : 0
@@ -797,6 +870,9 @@ export class Game {
     this.mercy = 4
     this.stun = 1.4
     this.menu = null
+    this.board = null
+    this.door = 0
+    this.doorCar = null
     if (this.driving) this.exitCar()
     for (const cop of this.cars) if (cop.role === 'police') cop.alive = false
     const base = this.ownsHome ? DRIVEWAY : SPAWN
@@ -809,6 +885,8 @@ export class Game {
 
   private currentPrompt() {
     if (this.menu || this.stun > 0) return ''
+    if (this.board?.mode === 'in') return 'Getting in'
+    if (this.board?.mode === 'out') return 'Getting out'
     if (this.driving) return 'ACT  exit'
     if (inZone(this.px, this.pz, FOOD_ZONE, 0.3)) return 'ACT  order'
     if (inZone(this.px, this.pz, HOME_ZONE, 0.4)) return this.ownsHome ? 'ACT  rest & save' : 'ACT  buy Lace House'

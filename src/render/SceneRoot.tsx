@@ -6,8 +6,8 @@ import { Game } from '../sim/game'
 import { SOLIDS } from '../sim/world'
 import { readGamepad } from '../input'
 import { cityMaterials, type Maps } from './materials'
-import { animateFigure, createFigure, makeMaterials } from './human'
-import { createCar } from './cars'
+import type { Cast } from './people'
+import { touchRain } from './rain'
 
 const scratch = new THREE.Color()
 const wreck = new THREE.Color('#241816')
@@ -94,6 +94,88 @@ function City({ maps, nightRef }: { maps: Maps; nightRef: MutableRefObject<numbe
         <cylinderGeometry args={[1.5, 1.6, 0.35, 24]} />
         <meshStandardMaterial color="#16324f" emissive="#3d8bff" emissiveIntensity={0.4} roughness={0.15} metalness={0.4} />
       </mesh>
+      <Dressing />
+    </group>
+  )
+}
+
+const LAMPS: [number, number][] = [
+  [-11.2, -11.2],
+  [11.2, -11.2],
+  [-11.2, 11.2],
+  [11.2, 11.2],
+  [-47, -11],
+  [47, -11],
+  [-11, 40],
+  [22, -40],
+  [40, 11],
+  [-40, 22],
+]
+
+const PUDDLES: [number, number, number][] = [
+  [-16, -20, 2.4],
+  [20, -16, 1.8],
+  [-20, 16, 2.1],
+  [16, 20, 2.2],
+  [2, -14, 2.6],
+  [-30, -42, 1.6],
+  [34, 2, 1.7],
+  [4, 16, 2.2],
+]
+
+function Dressing() {
+  const puddle = useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: '#0c1420',
+        metalness: 0.15,
+        roughness: 0.04,
+        clearcoat: 1,
+        clearcoatRoughness: 0.05,
+        envMapIntensity: 1.8,
+        transparent: true,
+        opacity: 0.72,
+      }),
+    [],
+  )
+  return (
+    <group>
+      {PUDDLES.map(([x, z, s]) => (
+        <mesh key={`${x}-${z}`} position={[x, 0.045, z]} rotation-x={-Math.PI / 2} receiveShadow>
+          <circleGeometry args={[s, 20]} />
+          <primitive object={puddle} attach="material" />
+        </mesh>
+      ))}
+      {LAMPS.map(([x, z]) => (
+        <group key={`${x}-${z}`} position={[x, 0, z]}>
+          <mesh position={[0, 2.1, 0]} castShadow>
+            <cylinderGeometry args={[0.06, 0.08, 4.2, 8]} />
+            <meshStandardMaterial color="#2a2e38" metalness={0.7} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, 4.25, 0]}>
+            <boxGeometry args={[0.55, 0.08, 0.28]} />
+            <meshStandardMaterial color="#d7e6ff" emissive="#9ecbff" emissiveIntensity={2.4} toneMapped={false} />
+          </mesh>
+          <pointLight position={[0, 4.1, 0]} color="#c5dcff" intensity={4} distance={9} decay={2} />
+        </group>
+      ))}
+      {[
+        [-6, 6],
+        [6, 6],
+        [-6, -22],
+        [22, 6],
+      ].map(([x, z]) => (
+        <group key={`bench-${x}-${z}`} position={[x, 0, z]}>
+          <mesh position={[0, 0.42, 0]} castShadow>
+            <boxGeometry args={[1.3, 0.08, 0.42]} />
+            <meshStandardMaterial color="#6b3a2a" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.72, -0.16]} castShadow>
+            <boxGeometry args={[1.3, 0.42, 0.08]} />
+            <meshStandardMaterial color="#4a2a22" roughness={0.75} />
+          </mesh>
+        </group>
+      ))}
     </group>
   )
 }
@@ -193,18 +275,11 @@ function Reflections() {
   return null
 }
 
-export function SceneRoot({ sim, maps }: { sim: Game; maps: Maps }) {
+const seatOffset = new THREE.Vector3()
+const spin = new THREE.Quaternion()
+
+export function SceneRoot({ sim, maps, cast }: { sim: Game; maps: Maps; cast: Cast }) {
   const nightRef = useRef(1)
-  const actors = useMemo(() => {
-    const aniMats = makeMaterials(maps, { skinTint: '#ffd0be', clothTint: '#111', hairTint: '#f2d27a', dress: true })
-    const ani = createFigure({ ...aniMats, dress: true, tails: true })
-    const people = sim.peds.map((ped) => {
-      const mats = makeMaterials(maps, { skinTint: ped.tint, clothTint: ped.cloth, hairTint: ped.hair, dress: false })
-      return createFigure({ ...mats, dress: false, tails: false, hairScale: 0.9 })
-    })
-    const cars = sim.cars.map((car) => createCar(car.kind, car.color))
-    return { ani, people, cars }
-  }, [maps, sim])
 
   useFrame((state, dt) => {
     readGamepad()
@@ -213,33 +288,75 @@ export function SceneRoot({ sim, maps }: { sim: Game; maps: Maps }) {
     const fog = state.scene.fog as THREE.Fog | null
     if (fog) fog.color.set(sim.night > 0.5 ? '#120614' : '#9eb8d4')
 
-    const { ani, people, cars } = actors
-    ani.visible = !sim.driving
-    ani.position.set(sim.px, 0, sim.pz)
-    const yaw = ani.getObjectByName('yaw')
-    if (yaw) yaw.rotation.y = sim.pyaw
-    animateFigure(ani, sim.time, sim.driving ? 0 : sim.foot)
+    const camera = state.camera.position
+    const seated = !!sim.driving
+    const ani = cast.ani
+    if (seated && sim.driving) {
+      seatOffset.set(0.36, 0.02, -0.12)
+      seatOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), sim.driving.yaw)
+      ani.root.position.set(sim.driving.x + sim.driving.ox + seatOffset.x, 0.02, sim.driving.z + sim.driving.oz + seatOffset.z)
+      ani.face(sim.driving.yaw, 0)
+      ani.grip(true)
+      ani.update(dt, 0, 'sit', 1, 4)
+    } else {
+      ani.root.position.set(sim.px, 0, sim.pz)
+      ani.face(sim.pyaw, 0)
+      ani.grip(false)
+      ani.update(dt, sim.foot, 'locomotion', 1, 4)
+    }
+    ani.root.visible = true
 
     sim.peds.forEach((ped, i) => {
-      const group = people[i]
-      group.visible = ped.down < 10.2
-      group.position.set(ped.x, ped.down > 0 ? 0.15 : 0, ped.z)
-      const pedYaw = group.getObjectByName('yaw')
-      if (pedYaw) {
-        pedYaw.rotation.y = ped.yaw
-        pedYaw.rotation.x = ped.down > 0 ? 1.2 : 0
-      }
-      animateFigure(group, sim.time + i, ped.down > 0 ? 0 : ped.speed)
+      const person = cast.peds[i]
+      if (!person) return
+      person.root.visible = ped.down < 10.2
+      person.root.position.set(ped.x, ped.down > 0 ? 0.12 : 0, ped.z)
+      person.face(ped.yaw, ped.down > 0 ? 1.15 : 0)
+      const distance = camera.distanceTo(person.root.position)
+      person.update(dt, ped.down > 0 ? 0 : ped.speed, ped.down > 0 ? 'down' : 'locomotion', 1, distance)
     })
 
+    let copIndex = 0
     sim.cars.forEach((car, i) => {
-      const group = cars[i]
+      const group = cast.cars[i]
       group.visible = car.alive
       group.position.set(car.x + car.ox, 0, car.z + car.oz)
       group.rotation.y = car.yaw
+      const open = sim.doorCar === car ? sim.door : 0
+      const door = group.getObjectByName('door')
+      if (door) door.rotation.y = open * 1.35
+      const steer = group.getObjectByName('steer')
+      if (steer) {
+        const axle = group.userData.axle as THREE.Vector3 | undefined
+        const base = group.userData.steerBase as THREE.Quaternion | undefined
+        if (axle && base) {
+          spin.setFromAxisAngle(axle, -car.steer * 1.7)
+          steer.quaternion.copy(base).multiply(spin)
+        } else steer.rotation.z = -car.steer * 1.5
+      }
       group.traverse((obj) => {
-        if (obj.name === 'wheel') obj.rotation.y = car.wheel
+        if (obj.name === 'wheel') {
+          if (obj.userData.spin === 'z') obj.rotation.z = car.wheel
+          else obj.rotation.y = car.wheel
+        }
+        if (obj.name === 'wiper') obj.rotation.y = Math.sin(sim.time * 2.1) * 0.6
       })
+      touchRain(group, sim.time)
+      if (car.role === 'police') {
+        const cop = cast.cops[copIndex++]
+        if (cop) {
+          const near = camera.distanceTo(group.position) < 32
+          cop.root.visible = car.alive && near
+          if (cop.root.visible) {
+            seatOffset.set(0.34, 0.02, -0.08)
+            seatOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.yaw)
+            cop.root.position.set(car.x + seatOffset.x, 0.02, car.z + seatOffset.z)
+            cop.face(car.yaw, 0)
+            cop.grip(true)
+            cop.update(dt, 0, 'sit', 1, 6)
+          }
+        }
+      }
       const paint = group.userData.paint as THREE.MeshPhysicalMaterial | undefined
       if (paint) {
         scratch.set(car.color).lerp(wreck, 1 - car.condition / 100)
@@ -296,12 +413,15 @@ export function SceneRoot({ sim, maps }: { sim: Game; maps: Maps }) {
       <Reflections />
       <Sky nightRef={nightRef} />
       <City maps={maps} nightRef={nightRef} />
-      <primitive object={actors.ani} />
-      {actors.people.map((person, i) => (
-        <primitive key={i} object={person} />
+      <primitive object={cast.ani.root} />
+      {cast.peds.map((person, i) => (
+        <primitive key={i} object={person.root} />
       ))}
-      {actors.cars.map((car, i) => (
-        <primitive key={i} object={car} />
+      {cast.cops.map((cop, i) => (
+        <primitive key={`cop-${i}`} object={cop.root} />
+      ))}
+      {cast.cars.map((car, i) => (
+        <primitive key={`car-${i}`} object={car} />
       ))}
       <Rain />
       <EffectComposer multisampling={4} enableNormalPass={false}>

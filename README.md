@@ -1,6 +1,6 @@
 # Ani City: Lace & Mayhem
 
-A playable iPhone prototype of a small open city. Ani is a modeled character — blonde twin-tails, blue eyes, black off-shoulder lace dress — not a stack of capsules. The city, skin, lace, brick, and wet asphalt use baked PBR textures. Lighting is Three.js: clearcoat car paint, bloom, filmic tone mapping, and a night reflection probe.
+A playable iPhone prototype of a small open city. Ani and the pedestrians are CC0 rigged humans (see CREDITS.md): skinned walk, jog, run, and idle clips, a wet clearcoat cornea, and hair cards. Ani keeps blonde twin-tails, blue eyes, and a black lace outfit over the only adult female locomotion rig that library ships. The black sports car is a CC0 coupe with a windscreen rain shader, wipers, a steering wheel that follows steer input, and a door swing when you get in or out. Roads stay wet, with puddles. Lighting is Three.js: clearcoat, bloom, filmic tone mapping, and a night reflection probe.
 
 This is a vertical slice. It is landscape-only and targets iOS 16+.
 
@@ -38,12 +38,18 @@ The last command needs a Mac with Xcode and CocoaPods.
 
 ## In this slice
 
-- A few blocks: roads, lights, a graffiti hood, Lace Burger, and one house with a driveway
-- Day/night, starting at night, with light rain
-- Modeled Ani and pedestrians, arcade cars, traffic, police
+- Several blocks: roads, lights, a graffiti hood, extra shop rows, Lace Burger, and one house with a driveway
+- Street lamps, benches, and puddles
+- Day/night, starting at night, with rain streaks on glass, wipers, and wet skin and cloth
+- Rigged Ani, pedestrians, and police, with LODs past 16 meters
+- One detailed coupe plus arcade traffic. Getting in opens the door, then a seated pose. The wheel turns with steering
 - Touch controls and standard gamepads
 - One save slot
 
+## Size
+
+The unsigned IPA is tens of megabytes, not the 3 GB end of a texture dump. The two character GLBs and the coupe are about 44 MB uncompressed, which is the bulk of the app. A multi-gigabyte pack of 4K scans would blow past what this GitHub builder, appdb sideload, and an iPhone's memory can reliably chew, and the skinned crowd would drop frames before the extra texels helped. High detail is reserved for Ani and the hero car. Everyone else shares those rigs and drops to a tiny proxy when far away.
+
 ## Not in this slice
 
-The rest of the city, guns, companions, weather systems beyond the rain, and real Unreal Engine rendering. The look is a PBR Three.js scene aimed at a night-city read, not Nanite or Lumen.
+This is not Nanite, Lumen, MetaHuman, or strand hair. Skin uses sheen as a stand-in for subsurface scattering. Eyes are a clearcoat cornea over the painted face, not a full refraction shader. Ani's black lace dress is a restyle of the CC0 suit mesh plus an overskirt, because that rig does not include a separate off-shoulder dress. The coupe's outer door is modeled into the body, so the swing is clearest on the simpler cars. Hands reach the wheel with a posed grip, not IK. There is no Mixamo data. Guns, companions, and the rest of a full city are still out.

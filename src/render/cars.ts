@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import type { CarKind } from '../sim/game'
+import { rainGlass } from './rain'
 
 export function createCar(kind: CarKind, color: string) {
   const root = new THREE.Group()
@@ -49,10 +50,39 @@ export function createCar(kind: CarKind, color: string) {
   body.receiveShadow = true
   root.add(body)
 
-  const cabin = new THREE.Mesh(new RoundedBoxGeometry(spec.w * 0.82, spec.ch, spec.l * 0.46, 3, 0.08), glass)
+  const cabin = new THREE.Mesh(new RoundedBoxGeometry(spec.w * 0.82, spec.ch, spec.l * 0.46, 3, 0.08), rainGlass())
   cabin.position.set(0, spec.by + spec.bh * 0.45, -spec.l * 0.04)
   cabin.castShadow = true
   root.add(cabin)
+
+  const door = new THREE.Group()
+  door.name = 'door'
+  door.position.set(spec.w * 0.46, spec.by, -spec.l * 0.18)
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(0.07, spec.bh * 0.92, spec.l * 0.38), paint)
+  panel.position.set(0.02, 0, 0.12)
+  panel.castShadow = true
+  const windowPane = new THREE.Mesh(new THREE.BoxGeometry(0.05, spec.ch * 0.55, spec.l * 0.22), glass)
+  windowPane.position.set(0.04, spec.bh * 0.28, 0.08)
+  door.add(panel, windowPane)
+  root.add(door)
+
+  const steer = new THREE.Group()
+  steer.name = 'steer'
+  steer.userData.spin = 'z'
+  steer.position.set(0.32, spec.by + spec.bh * 0.15, -0.22)
+  const wheelRim = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.016, 8, 18), rim)
+  const wheelHub = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 10), rim)
+  wheelHub.rotation.x = Math.PI / 2
+  steer.add(wheelRim, wheelHub)
+  root.add(steer)
+
+  const wiper = new THREE.Group()
+  wiper.name = 'wiper'
+  wiper.position.set(0.05, spec.by + spec.bh * 0.72, -spec.l * 0.16)
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.02, 0.62), rubber)
+  blade.position.set(0, 0, -0.22)
+  wiper.add(blade)
+  root.add(wiper)
 
   addLamp(root, lamp, -spec.w * 0.32, spec.by, -spec.l * 0.48, 0.32, 0.1, 0.08)
   addLamp(root, lamp, spec.w * 0.32, spec.by, -spec.l * 0.48, 0.32, 0.1, 0.08)

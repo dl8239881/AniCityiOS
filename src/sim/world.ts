@@ -67,6 +67,10 @@ box('dt-c', -8, -2, 16, 22, 20, 'downtown')
 box('dt-d', 2, 8, 24, 32, 15, 'downtown')
 box('dt-e', 28, 35, 16, 23, 18, 'downtown')
 box('dt-f', 38, 44, 25, 32, 11, 'downtown')
+box('north-row', -46, -28, 28, 42, 6.2, 'hood')
+box('east-tower', 26, 42, 36, 48, 15, 'downtown')
+box('south-shop', -46, -34, -50, -42, 4.4, 'brick')
+box('mid-shop', 40, 47, -10, -2, 5.4, 'brick')
 
 // City edge
 box('wall-s', -66, 66, -67, -64, 1.4, 'concrete')
